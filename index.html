@@ -55,9 +55,9 @@ h2{font-family:'Cormorant Garamond',Tajawal,serif;font-size:34px}
 <div id="bar"><div><b id="cnt">0</b> صنف · <b id="sum">0</b> ج.م</div><button class="btn" onclick="openCart()">راجع الطلب</button></div>
 <div id="modal"><div class="box"><h2>طلبك</h2><div id="lines"></div><div class="row tot"><span>الإجمالي</span><span id="tot"></span></div>
 <input id="nm" placeholder="الاسم"><input id="ph" placeholder="رقم الموبايل" inputmode="tel">
-<select id="ty"><option value="استلام من الكافيه">استلام من الكافيه</option><option value="توصيل">توصيل</option></select>
+<select id="ty" onchange="openCart()"><option value="استلام من الكافيه">استلام من الكافيه</option><option value="توصيل">توصيل</option></select>
 <textarea id="ad" rows="2" placeholder="العنوان (للتوصيل)"></textarea><textarea id="nt" rows="2" placeholder="ملاحظات"></textarea>
-<button class="btn" style="width:100%;margin-top:8px" onclick="send()">ابعت الطلب على واتساب</button>
+<button class="btn" style="width:100%;margin-top:8px" onclick="send()">ابعت الطلب</button>
 <button class="tab" style="width:100%;margin-top:8px" onclick="closeCart()">رجوع</button></div></div>
 <script>
 /* TEST number (Ahmed's own). To switch to the cafe: change ONLY this value, international format, no + or leading 0 (e.g. 20 + 1XXXXXXXXX). Or open the page with ?wa=20XXXXXXXXXX */
@@ -83,9 +83,12 @@ $('list').innerHTML=MENU.map((m,k)=>m.c!=cat?'':`<div class="item"><img src="${e
 const n=Object.values(cart).reduce((a,b)=>a+b,0),s=Object.entries(cart).reduce((a,[k,q])=>a+MENU[k].p*q,0);
 $('cnt').textContent=n;$('sum').textContent=s;$('bar').style.display=n?'flex':'none';}
 function chg(k,d){cart[k]=Math.max(0,(cart[k]||0)+d);if(!cart[k])delete cart[k];render();if($('modal').style.display=='flex')openCart()}
-function total(){return Object.entries(cart).reduce((a,[k,q])=>a+MENU[k].p*q,0)}
+let FEE=Number(localStorage.ashFee||0)||0;
+function sub(){return Object.entries(cart).reduce((a,[k,q])=>a+MENU[k].p*q,0)}
+function fee(){return $('ty')&&$('ty').value=='توصيل'?FEE:0}
+function total(){return sub()+fee()}
 function openCart(){ if(!Object.keys(cart).length)return closeCart();
-$('lines').innerHTML=Object.entries(cart).map(([k,q])=>`<div class="row"><span>${q}× ${MENU[k].n}</span><span>${q*MENU[k].p}</span></div>`).join('');$('tot').textContent=total()+' ج.م';$('modal').style.display='flex'}
+$('lines').innerHTML=Object.entries(cart).map(([k,q])=>`<div class="row"><span>${q}× ${MENU[k].n}</span><span>${q*MENU[k].p}</span></div>`).join('')+(fee()?`<div class="row"><span>🛵 رسوم التوصيل</span><span>${fee()}</span></div>`:'');$('tot').textContent=total()+' ج.م';$('modal').style.display='flex'}
 function closeCart(){$('modal').style.display='none'}
 const getO=()=>JSON.parse(localStorage.ashOrders||'[]');
 let sending=false;
@@ -94,13 +97,13 @@ function ovlClose(){const d=document.getElementById('ovl');if(d)d.style.display=
 async function send(){if(sending)return;const nm=$('nm').value.trim(),ph=$('ph').value.trim(),ty=$('ty').value,ad=$('ad').value.trim();
 if(!nm||!ph)return alert('اكتب الاسم والموبايل');if(ty=='توصيل'&&!ad)return alert('اكتب العنوان');
 const items=Object.entries(cart).map(([k,q])=>({n:MENU[k].n,q,p:MENU[k].p}));
-const o={id:'A'+Date.now().toString().slice(-6),t:new Date().toLocaleString('ar-EG'),nm,ph,ty,ad,nt:$('nt').value.trim(),items,total:total()};
+const o={id:'A'+Date.now().toString().slice(-6),t:new Date().toLocaleString('ar-EG'),nm,ph,ty,ad,nt:$('nt').value.trim(),items,fee:fee(),total:total()};
 const a=getO();a.unshift(o);localStorage.ashOrders=JSON.stringify(a);
 sending=true;ovl('<div style="font-size:18px">جاري إرسال الطلب...</div>');
 let ok=false;
 try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),20000);const r=await fetch(CONFIG.sheetUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:ac.signal});clearTimeout(tm);const j=await r.json();ok=!!(j&&j.ok)}catch(e){ok=false}
 sending=false;
-const L="\u2501".repeat(14);const msg=`${E.cup} *Ash Café | آش كافيه*\n${L}\n${E.bill} *طلب جديد* #${o.id}\n${E.clock} ${o.t}\n${L}\n${E.user} *العميل*\n• الاسم: ${nm}\n• الموبايل: ${ph}\n${L}\n${E.bag} *الطلب*\n`+items.map(i=>`• ${i.q}× ${i.n} — ${i.q*i.p} ج.م`).join('\n')+`\n${L}\n${E.money} *الإجمالي: ${o.total} ج.م*\n${L}\n${ty=='توصيل'?E.moto+' *توصيل*\n'+E.pin+' '+ad:E.shop+' *استلام من الكافيه*'}`+(o.nt?`\n${L}\n${E.note} *ملاحظات*\n${o.nt}`:'')+`\n${L}\nشكراً لاختيارك آش كافيه ${E.heart}`;
+const L="\u2501".repeat(14);const msg=`${E.cup} *Ash Café | آش كافيه*\n${L}\n${E.bill} *طلب جديد* #${o.id}\n${E.clock} ${o.t}\n${L}\n${E.user} *العميل*\n• الاسم: ${nm}\n• الموبايل: ${ph}\n${L}\n${E.bag} *الطلب*\n`+items.map(i=>`• ${i.q}× ${i.n} — ${i.q*i.p} ج.م`).join('\n')+`\n${L}\n${o.fee?E.moto+' رسوم التوصيل: '+o.fee+' ج.م\n':''}${E.money} *الإجمالي: ${o.total} ج.م*\n${L}\n${ty=='توصيل'?E.moto+' *توصيل*\n'+E.pin+' '+ad:E.shop+' *استلام من الكافيه*'}`+(o.nt?`\n${L}\n${E.note} *ملاحظات*\n${o.nt}`:'')+`\n${L}\nشكراً لاختيارك آش كافيه ${E.heart}`;
 if(ok){cart={};closeCart();render();ovl('<div style="font-size:42px">\u2705</div><h3 style="margin:8px 0">وصلنا طلبك!</h3><div>رقم الطلب: <b>#'+o.id+'</b></div><div style="margin:8px 0">الإجمالي: <b>'+o.total+' ج.م</b></div><div style="opacity:.8;font-size:14px">هنتواصل معاك على رقم '+esc(ph)+' لتأكيد الطلب.</div><button onclick="ovlClose()" style="margin-top:16px;padding:10px 28px;border-radius:999px;border:0;background:#c8a26a;color:#1b130d;font-weight:700;font-size:16px">تمام</button>')}
 else{window.__msg=msg;ovl('<h3 style="margin:0 0 8px">مقدرناش نبعت الطلب أوتوماتيك</h3><div style="font-size:14px;opacity:.85">ابعته بنفسك على واتساب بضغطة:</div><button onclick="cart={};closeCart();render();ovlClose();openWA(window.__msg)" style="margin-top:14px;padding:10px 24px;border-radius:999px;border:0;background:#25d366;color:#fff;font-weight:700;font-size:16px">ابعت على واتساب</button><div><button onclick="ovlClose()" style="margin-top:10px;background:none;border:0;color:#c8a26a;text-decoration:underline">رجوع</button></div>')}}
 function openWA(msg){const q="phone="+CONFIG.whatsapp+"&text="+encodeURIComponent(msg);
@@ -109,7 +112,7 @@ location.href="whatsapp://send?"+q;
 setTimeout(()=>{document.removeEventListener("visibilitychange",f);if(!left&&!document.hidden)location.href="https://api.whatsapp.com/send?"+q},1200)}
 render();
 (function(){if(!CONFIG.sheetUrl)return;const ac=new AbortController();setTimeout(()=>ac.abort(),8000);
-fetch(CONFIG.sheetUrl,{signal:ac.signal}).then(r=>r.json()).then(j=>{const m=j&&j.menu;if(!Array.isArray(m)||!m.length)return;
+fetch(CONFIG.sheetUrl,{signal:ac.signal}).then(r=>r.json()).then(j=>{if(j&&Number(j.fee)>=0){FEE=Number(j.fee);try{localStorage.ashFee=String(FEE)}catch(e){}}const m=j&&j.menu;if(!Array.isArray(m)||!m.length)return;
 const ok=m.filter(x=>x&&x.n&&x.p>0).map(x=>({c:x.c||'المنيو',n:String(x.n),d:String(x.d||''),p:Number(x.p),i:x.i||''}));if(!ok.length)return;
 try{localStorage.ashMenu=JSON.stringify(ok)}catch(e){}
 if(Object.keys(cart).length)return;MENU=ok;cats=[...new Set(MENU.map(m=>m.c))];render()}).catch(()=>{})})();
