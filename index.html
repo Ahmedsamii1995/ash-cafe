@@ -50,8 +50,7 @@ h2{font-family:'Cormorant Garamond',Tajawal,serif;font-size:34px}
 <div class="glass hours"><b>مواعيد العمل</b><span>يومياً · 7:00 ص — 12:00 م</span></div></div></div>
 <section><h2>حكايتنا</h2><p style="color:var(--mu);line-height:1.8">بن مختار، تحميص أسبوعي، وباريستا بيتعامل مع كل كوب كحرفة. مفتوح يومياً 7ص – 12م.</p></section>
 <section id="menu"><h2>المنيو</h2><div class="tabs" id="tabs"></div><div id="list"></div></section>
-<section><h2>الطلبات (للإدارة)</h2><p style="color:var(--mu);font-size:13px">الطلبات بتتسجل هنا على الجهاز وبتتبعت لواتساب. للتسجيل المركزي حط رابط Google Sheet في CONFIG.</p>
-<div style="overflow:auto"><table id="orders"></table></div><p><button class="btn" onclick="exportCsv()">تحميل الطلبات CSV</button></p></section>
+
 <footer>© 2026 Ash Café</footer>
 <div id="bar"><div><b id="cnt">0</b> صنف · <b id="sum">0</b> ج.م</div><button class="btn" onclick="openCart()">راجع الطلب</button></div>
 <div id="modal"><div class="box"><h2>طلبك</h2><div id="lines"></div><div class="row tot"><span>الإجمالي</span><span id="tot"></span></div>
@@ -78,7 +77,7 @@ const $=id=>document.getElementById(id);
 function render(){ $('tabs').innerHTML=cats.map(c=>`<button class="tab ${c==cat?'on':''}" onclick="cat='${c}';render()">${c}</button>`).join('');
 $('list').innerHTML=MENU.map((m,k)=>m.c!=cat?'':`<div class="item"><img src="${IMG[m.i]}"><div class="i"><h3>${m.n}</h3><small>${m.d}</small><div class="pr">${m.p} ج.م</div></div><div class="qty"><button onclick="chg(${k},-1)">−</button><b>${cart[k]||0}</b><button onclick="chg(${k},1)">+</button></div></div>`).join('');
 const n=Object.values(cart).reduce((a,b)=>a+b,0),s=Object.entries(cart).reduce((a,[k,q])=>a+MENU[k].p*q,0);
-$('cnt').textContent=n;$('sum').textContent=s;$('bar').style.display=n?'flex':'none';renderOrders()}
+$('cnt').textContent=n;$('sum').textContent=s;$('bar').style.display=n?'flex':'none';}
 function chg(k,d){cart[k]=Math.max(0,(cart[k]||0)+d);if(!cart[k])delete cart[k];render();if($('modal').style.display=='flex')openCart()}
 function total(){return Object.entries(cart).reduce((a,[k,q])=>a+MENU[k].p*q,0)}
 function openCart(){ if(!Object.keys(cart).length)return closeCart();
@@ -98,8 +97,5 @@ function openWA(msg){const q="phone="+CONFIG.whatsapp+"&text="+encodeURIComponen
 let left=false;const f=()=>{if(document.hidden)left=true};document.addEventListener("visibilitychange",f);
 location.href="whatsapp://send?"+q;
 setTimeout(()=>{document.removeEventListener("visibilitychange",f);if(!left&&!document.hidden)location.href="https://api.whatsapp.com/send?"+q},1200)}
-function renderOrders(){const a=getO();$('orders').innerHTML=a.length?'<tr><th>#</th><th>الاسم</th><th>الإجمالي</th></tr>'+a.map(o=>`<tr><td>${o.id}</td><td>${o.nm}</td><td>${o.total}</td></tr>`).join(''):'<tr><td>لا طلبات بعد</td></tr>'}
-function exportCsv(){const r=[['id','time','name','phone','type','address','items','total']].concat(getO().map(o=>[o.id,o.t,o.nm,o.ph,o.ty,o.ad,o.items.map(i=>i.q+'x'+i.n).join('; '),o.total]));
-const b=new Blob(['\ufeff'+r.map(x=>x.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n')],{type:'text/csv'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='orders.csv';l.click()}
 render();
 </script></body></html>
