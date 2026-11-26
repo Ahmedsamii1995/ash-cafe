@@ -88,15 +88,21 @@ function openCart(){ if(!Object.keys(cart).length)return closeCart();
 $('lines').innerHTML=Object.entries(cart).map(([k,q])=>`<div class="row"><span>${q}× ${MENU[k].n}</span><span>${q*MENU[k].p}</span></div>`).join('');$('tot').textContent=total()+' ج.م';$('modal').style.display='flex'}
 function closeCart(){$('modal').style.display='none'}
 const getO=()=>JSON.parse(localStorage.ashOrders||'[]');
-function send(){const nm=$('nm').value.trim(),ph=$('ph').value.trim(),ty=$('ty').value,ad=$('ad').value.trim();
+let sending=false;
+function ovl(h){let d=document.getElementById('ovl');if(!d){d=document.createElement('div');d.id='ovl';d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px';document.body.appendChild(d)}d.innerHTML='<div style="background:#1b130d;border:1px solid #c8a26a;border-radius:16px;max-width:360px;width:100%;padding:24px;text-align:center;color:#f3e6d3;font-family:inherit;direction:rtl">'+h+'</div>';d.style.display='flex'}
+function ovlClose(){const d=document.getElementById('ovl');if(d)d.style.display='none'}
+async function send(){if(sending)return;const nm=$('nm').value.trim(),ph=$('ph').value.trim(),ty=$('ty').value,ad=$('ad').value.trim();
 if(!nm||!ph)return alert('اكتب الاسم والموبايل');if(ty=='توصيل'&&!ad)return alert('اكتب العنوان');
 const items=Object.entries(cart).map(([k,q])=>({n:MENU[k].n,q,p:MENU[k].p}));
 const o={id:'A'+Date.now().toString().slice(-6),t:new Date().toLocaleString('ar-EG'),nm,ph,ty,ad,nt:$('nt').value.trim(),items,total:total()};
 const a=getO();a.unshift(o);localStorage.ashOrders=JSON.stringify(a);
-try{if(CONFIG.sheetUrl)fetch(CONFIG.sheetUrl,{method:'POST',mode:'no-cors',keepalive:true,body:JSON.stringify(o)}).catch(()=>{})}catch(e){}
+sending=true;ovl('<div style="font-size:18px">جاري إرسال الطلب...</div>');
+let ok=false;
+try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),20000);const r=await fetch(CONFIG.sheetUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:ac.signal});clearTimeout(tm);const j=await r.json();ok=!!(j&&j.ok)}catch(e){ok=false}
+sending=false;
 const L="\u2501".repeat(14);const msg=`${E.cup} *Ash Café | آش كافيه*\n${L}\n${E.bill} *طلب جديد* #${o.id}\n${E.clock} ${o.t}\n${L}\n${E.user} *العميل*\n• الاسم: ${nm}\n• الموبايل: ${ph}\n${L}\n${E.bag} *الطلب*\n`+items.map(i=>`• ${i.q}× ${i.n} — ${i.q*i.p} ج.م`).join('\n')+`\n${L}\n${E.money} *الإجمالي: ${o.total} ج.م*\n${L}\n${ty=='توصيل'?E.moto+' *توصيل*\n'+E.pin+' '+ad:E.shop+' *استلام من الكافيه*'}`+(o.nt?`\n${L}\n${E.note} *ملاحظات*\n${o.nt}`:'')+`\n${L}\nشكراً لاختيارك آش كافيه ${E.heart}`;
-openWA(msg);
-cart={};closeCart();render()}
+if(ok){cart={};closeCart();render();ovl('<div style="font-size:42px">\u2705</div><h3 style="margin:8px 0">وصلنا طلبك!</h3><div>رقم الطلب: <b>#'+o.id+'</b></div><div style="margin:8px 0">الإجمالي: <b>'+o.total+' ج.م</b></div><div style="opacity:.8;font-size:14px">هنتواصل معاك على رقم '+esc(ph)+' لتأكيد الطلب.</div><button onclick="ovlClose()" style="margin-top:16px;padding:10px 28px;border-radius:999px;border:0;background:#c8a26a;color:#1b130d;font-weight:700;font-size:16px">تمام</button>')}
+else{window.__msg=msg;ovl('<h3 style="margin:0 0 8px">مقدرناش نبعت الطلب أوتوماتيك</h3><div style="font-size:14px;opacity:.85">ابعته بنفسك على واتساب بضغطة:</div><button onclick="cart={};closeCart();render();ovlClose();openWA(window.__msg)" style="margin-top:14px;padding:10px 24px;border-radius:999px;border:0;background:#25d366;color:#fff;font-weight:700;font-size:16px">ابعت على واتساب</button><div><button onclick="ovlClose()" style="margin-top:10px;background:none;border:0;color:#c8a26a;text-decoration:underline">رجوع</button></div>')}}
 function openWA(msg){const q="phone="+CONFIG.whatsapp+"&text="+encodeURIComponent(msg);
 let left=false;const f=()=>{if(document.hidden)left=true};document.addEventListener("visibilitychange",f);
 location.href="whatsapp://send?"+q;
