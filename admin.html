@@ -1,0 +1,10 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Orders</title>
+<style>body{font-family:sans-serif;background:#100d0b;color:#efe7da;padding:16px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px;border-bottom:1px solid #3a322b;text-align:right;vertical-align:top}button{background:#c8a26b;border:0;border-radius:10px;padding:10px 16px;font-size:15px;margin:8px 0}small{color:#a89c8b}</style></head><body>
+<h3>طلبات هذا الجهاز</h3><small>بيعرض الطلبات اللي اتسجلت على نفس الجهاز/المتصفح فقط. مش محمي بباسورد.</small>
+<div style="overflow:auto"><table id="t"></table></div><button onclick="csv()">تحميل CSV</button>
+<script>
+const g=()=>JSON.parse(localStorage.ashOrders||"[]");
+const a=g();document.getElementById("t").innerHTML=a.length?"<tr><th>#</th><th>الوقت</th><th>الاسم</th><th>الموبايل</th><th>النوع</th><th>الطلب</th><th>الإجمالي</th></tr>"+a.map(o=>"<tr><td>"+[o.id,o.t,o.nm,o.ph,o.ty+(o.ad?" - "+o.ad:""),o.items.map(i=>i.q+"× "+i.n).join("<br>"),o.total].map(v=>String(v).replace(/</g,"&lt;")).join("</td><td>")+"</td></tr>").join(""):"<tr><td>لا طلبات على هذا الجهاز</td></tr>";
+function csv(){const r=[["id","time","name","phone","type","address","items","total"]].concat(g().map(o=>[o.id,o.t,o.nm,o.ph,o.ty,o.ad,o.items.map(i=>i.q+"x"+i.n).join("; "),o.total]));
+const b=new Blob(["\ufeff"+r.map(x=>x.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n")],{type:"text/csv"});const l=document.createElement("a");l.href=URL.createObjectURL(b);l.download="orders.csv";l.click()}
+</script></body></html>
